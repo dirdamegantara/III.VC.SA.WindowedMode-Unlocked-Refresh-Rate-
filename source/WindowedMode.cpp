@@ -298,9 +298,10 @@ void WindowedMode::WindowCalculateGeometry(bool center, bool resizeWindow)
 		d3dPresentParams9->hDeviceWindow = window;
 		d3dPresentParams9->BackBufferWidth = windowSizeClient.x;
 		d3dPresentParams9->BackBufferHeight = windowSizeClient.y;
-		d3dPresentParams9->BackBufferFormat = D3DFMT_A8R8G8B8;
+		if (d3dPresentParams9->BackBufferFormat == D3DFMT_UNKNOWN)
+        d3dPresentParams9->BackBufferFormat = D3DFMT_X8R8G8B8;
 		d3dPresentParams9->SwapEffect = D3DSWAPEFFECT_DISCARD;
-		d3dPresentParams9->FullScreen_PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+		d3dPresentParams9->FullScreen_PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 		d3dPresentParams9->FullScreen_RefreshRateInHz = 0;
 	}
 	else
@@ -311,7 +312,7 @@ void WindowedMode::WindowCalculateGeometry(bool center, bool resizeWindow)
 		d3dPresentParams8->BackBufferHeight = windowSizeClient.y;
 		d3dPresentParams8->BackBufferFormat = D3DFMT_X8R8G8B8;
 		d3dPresentParams8->SwapEffect = D3DSWAPEFFECT_DISCARD;
-		d3dPresentParams8->FullScreen_PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+		d3dPresentParams8->FullScreen_PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 		d3dPresentParams8->FullScreen_RefreshRateInHz = 0;
 	}
 
@@ -695,28 +696,7 @@ HRESULT WindowedMode::D3dPresentHook(IDirect3DDevice8* self, const RECT* srcRect
 	if (inst->fpsCounter.update())
 		inst->WindowUpdateTitle();
 
-	auto result = inst->d3dPresentOri(self, srcRect, dstRect, wnd, region);
-
-	// limit framerate in main menu
-	if (inst->menuFrameRateLimit > 0 && inst->IsMainMenuVisible())
-	{
-		static DWORD prevTime = 0;
-		DWORD currTime = timeGetTime();
-	
-		while (true)
-		{
-			DWORD delta = currTime - prevTime;
-
-			if (delta >= (1000 / (DWORD)inst->menuFrameRateLimit))
-				break;
-
-			Sleep(1);
-			currTime = timeGetTime();
-		}
-		prevTime = currTime;
-	}
-
-	return result;
+	return inst->d3dPresentOri(self, srcRect, dstRect, wnd, region);
 }
 
 HRESULT WindowedMode::D3dResetHook(IDirect3DDevice8* self, D3DPRESENT_PARAMETERS* parameters)
@@ -730,7 +710,7 @@ HRESULT WindowedMode::D3dResetHook(IDirect3DDevice8* self, D3DPRESENT_PARAMETERS
 		inst->WindowResize({ (LONG)parameters->BackBufferWidth, (LONG)parameters->BackBufferHeight });
 	}
 
-	auto result = inst->d3dResetOri(self, inst->d3dPresentParams8);
+	auto result = inst->d3dResetOri(self, parameters);
 
 	if (SUCCEEDED(result))
 		inst->UpdatePostEffect();
